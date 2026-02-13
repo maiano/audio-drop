@@ -1,7 +1,3 @@
-/**
- * Interface: Logger
- * Определяет контракт для логирования
- */
 export interface ILogger {
   debug(message: string, context?: Record<string, unknown>): void;
   info(message: string, context?: Record<string, unknown>): void;

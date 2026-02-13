@@ -1,10 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { ILogger } from '../../domain/interfaces/ILogger.js';
 
-/**
- * Infrastructure: Health Check Server
- * HTTP сервер для health checks (необходим для Render.com)
- */
 export class HealthServer {
   private app: FastifyInstance;
 
@@ -12,15 +8,11 @@ export class HealthServer {
     private readonly port: number,
     private readonly logger: ILogger,
   ) {
-    this.app = Fastify({
-      logger: false, // Используем свой логгер
-    });
-
+    this.app = Fastify({ logger: false });
     this.setupRoutes();
   }
 
   private setupRoutes(): void {
-    // Health check endpoint
     this.app.get('/health', async () => {
       return {
         status: 'ok',
@@ -29,7 +21,6 @@ export class HealthServer {
       };
     });
 
-    // Root endpoint
     this.app.get('/', async () => {
       return {
         service: 'audio-drop-bot',

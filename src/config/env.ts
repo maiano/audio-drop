@@ -1,9 +1,5 @@
 import { z } from 'zod';
 
-/**
- * Configuration: Environment Variables
- * Валидация и типизация переменных окружения
- */
 const envSchema = z.object({
   BOT_TOKEN: z.string().min(1, 'BOT_TOKEN is required'),
   PORT: z.coerce.number().int().positive().default(3000),
@@ -13,9 +9,6 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
-/**
- * Загружает и валидирует переменные окружения
- */
 export function loadEnv(): Env {
   const parsed = envSchema.safeParse(process.env);
 

@@ -1,10 +1,6 @@
 import pino from 'pino';
 import type { ILogger } from '../../domain/interfaces/ILogger.js';
 
-/**
- * Infrastructure: Pino Logger
- * Реализация логгера через Pino
- */
 export class PinoLogger implements ILogger {
   private logger: pino.Logger;
 

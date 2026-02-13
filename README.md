@@ -1,209 +1,131 @@
 # 🎵 Audio Drop Bot
 
-Telegram бот для извлечения аудио из YouTube видео.
+Telegram bot for extracting audio from YouTube videos.
 
-## 📋 Возможности
+## Features
 
-- ✅ Извлечение аудио из YouTube видео
-- ✅ Оптимизированный формат Opus (32kbps) для речи
-- ✅ Стриминг напрямую в Telegram (без сохранения на диск)
-- ✅ Валидация ссылок и доступности видео
-- ✅ Защита от одновременных запросов от одного пользователя
-- ✅ Clean Architecture
-- ✅ Полностью типизирован (TypeScript)
+- Extract audio from YouTube videos
+- Optimized Opus format (32kbps) for speech
+- Direct streaming to Telegram (no disk storage)
+- Link validation and video availability check
+- Concurrent request protection per user
+- Clean Architecture with full TypeScript typing
 
-## 🏗️ Архитектура
+## Tech Stack
 
-Проект следует принципам Clean Architecture:
+- **TypeScript** - Full type safety
+- **Grammy** - Modern Telegram bot framework
+- **Fastify** - HTTP health check server
+- **Pino** - Structured logging
+- **yt-dlp** - Audio extraction
+- **Zod** - Runtime validation
+- **Biome** - Linting and formatting
 
-```
-src/
-├── domain/              # Бизнес-логика
-│   ├── entities/        # Сущности (AudioRequest, AudioFile)
-│   └── interfaces/      # Интерфейсы (IAudioExtractor, ILogger)
-├── application/         # Use Cases
-│   └── usecases/        # Бизнес-логика обработки запросов
-├── infrastructure/      # Внешние зависимости
-│   ├── telegram/        # Grammy bot
-│   ├── youtube/         # yt-dlp wrapper
-│   └── http/            # Fastify health server + Logger
-├── presentation/        # Handlers
-│   └── telegram/        # Telegram message handlers
-├── config/              # Конфигурация
-└── index.ts             # Entry point
-```
+## Quick Start
 
-## 🚀 Быстрый старт
-
-### Предварительные требования
+### Prerequisites
 
 - Node.js >= 20
-- Docker (опционально, для деплоя)
-- Telegram Bot Token (получить у [@BotFather](https://t.me/BotFather))
+- Docker (optional, for deployment)
+- Telegram Bot Token (get from [@BotFather](https://t.me/BotFather))
 
-### Локальная разработка
+### Local Development
 
-1. **Клонировать репозиторий**
 ```bash
-git clone <repo-url>
-cd audio-drop
-```
-
-2. **Установить зависимости**
-```bash
+# Install dependencies
 npm install
-```
 
-3. **Установить yt-dlp** (если еще не установлен)
-```bash
-# macOS
-brew install yt-dlp ffmpeg
+# Install yt-dlp and ffmpeg
+brew install yt-dlp ffmpeg  # macOS
+# or
+sudo apt install ffmpeg && pip install yt-dlp  # Linux
 
-# Linux
-pip install yt-dlp
-apt install ffmpeg  # или yum/dnf
-
-# Windows
-winget install yt-dlp
-winget install ffmpeg
-```
-
-4. **Создать .env файл**
-```bash
+# Create .env file
 cp .env.example .env
-```
+# Add your BOT_TOKEN to .env
 
-Заполнить `.env`:
-```env
-BOT_TOKEN=your_bot_token_here
-PORT=3000
-NODE_ENV=development
-LOG_LEVEL=debug
-```
-
-5. **Запустить в режиме разработки**
-```bash
+# Run in development mode
 npm run dev
 ```
 
-6. **Проверить линтинг**
-```bash
-npm run lint
-npm run format
-```
-
-## 🐳 Docker
-
-### Локальный запуск в Docker
+### Docker
 
 ```bash
-# Собрать образ
-docker build -t audio-drop-bot .
+# Using Docker Compose
+docker compose up -d
 
-# Запустить контейнер
-docker run -d \
-  --name audio-drop-bot \
-  -e BOT_TOKEN=your_token \
-  -e PORT=3000 \
-  -e NODE_ENV=production \
-  -p 3000:3000 \
-  audio-drop-bot
-
-# Посмотреть логи
-docker logs -f audio-drop-bot
+# View logs
+docker compose logs -f
 ```
 
-### Docker Compose
+## Environment Variables
 
-```bash
-# Создать .env файл (см. выше)
-# Запустить
-docker-compose up -d
-
-# Остановить
-docker-compose down
+```env
+BOT_TOKEN=your_bot_token_here
+PORT=3000
+NODE_ENV=production
+LOG_LEVEL=info
 ```
 
-## ☁️ Деплой на Render.com
+## Deployment
 
-### Автоматический деплой
+### Render.com
 
-1. Создать аккаунт на [Render.com](https://render.com)
-2. Подключить GitHub репозиторий
-3. Render автоматически обнаружит `render.yaml`
-4. Установить переменную окружения `BOT_TOKEN` в панели Render
-5. Задеплоить!
-
-### Ручной деплой
-
-1. В Render.com создать новый Web Service
-2. Выбрать Docker environment
-3. Установить переменные окружения:
-   - `BOT_TOKEN`: ваш Telegram bot token
-   - `NODE_ENV`: `production`
-   - `LOG_LEVEL`: `info`
-   - `PORT`: `3000`
-4. Установить Health Check Path: `/health`
+1. Create account on [Render.com](https://render.com)
+2. Connect your GitHub repository
+3. Render will auto-detect `render.yaml`
+4. Add `BOT_TOKEN` in environment variables
 5. Deploy!
 
-## 🔧 Технологии
+## Architecture
 
-- **Language**: TypeScript
-- **Telegram Bot**: Grammy
-- **HTTP Server**: Fastify
-- **Logger**: Pino
-- **Audio Extraction**: yt-dlp
-- **Validation**: Zod
-- **Linter/Formatter**: Biome
+```
+src/
+├── domain/              # Business logic
+│   ├── entities/        # AudioRequest, AudioFile
+│   └── interfaces/      # IAudioExtractor, ILogger
+├── application/         # Use cases
+│   └── usecases/        # ProcessAudioRequest
+├── infrastructure/      # External dependencies
+│   ├── telegram/        # Grammy bot wrapper
+│   ├── youtube/         # yt-dlp wrapper
+│   └── http/            # Fastify server, Pino logger
+├── presentation/        # Message handlers
+│   └── telegram/        # Telegram handlers
+├── config/              # Configuration
+└── index.ts             # Entry point
+```
 
-## 📝 Использование бота
+## Usage
 
-1. Найти бота в Telegram
-2. Отправить `/start`
-3. Отправить ссылку на YouTube видео
-4. Получить аудиофайл
+1. Find the bot in Telegram
+2. Send `/start`
+3. Send a YouTube link
+4. Receive the audio file
 
-### Поддерживаемые форматы ссылок:
+### Supported Link Formats
+
 - `https://youtube.com/watch?v=...`
 - `https://youtu.be/...`
 - `https://youtube.com/shorts/...`
 
-### Ограничения:
-- Максимальная длительность: 2 часа
-- Только публичные видео
-- Формат: Opus (оптимизирован для речи)
+### Limitations
 
-## 🛠️ Разработка
+- Maximum duration: 2 hours
+- Public videos only
+- Format: Opus (optimized for speech)
 
-### Структура команд
+## Development Commands
 
 ```bash
-npm run dev         # Запуск в режиме разработки с hot reload
-npm run build       # Компиляция TypeScript
-npm run start       # Запуск production build
-npm run lint        # Проверка линтинга
-npm run lint:fix    # Автофикс линтинга
-npm run format      # Форматирование кода
+npm run dev         # Development mode with hot reload
+npm run build       # Compile TypeScript
+npm run start       # Run production build
+npm run lint        # Check linting
+npm run lint:fix    # Auto-fix linting issues
+npm run format      # Format code
 ```
 
-### Добавление новых функций
-
-1. Создать entity/interface в `domain/`
-2. Реализовать infrastructure в `infrastructure/`
-3. Создать use case в `application/usecases/`
-4. Добавить handler в `presentation/`
-5. Обновить `index.ts` для регистрации
-
-## 📄 Лицензия
+## License
 
 ISC
-
-## 🤝 Contributing
-
-Pull requests приветствуются! Для крупных изменений сначала откройте issue.
-
-## ⚠️ Важные замечания
-
-- Бот использует бесплатный tier Render.com, который засыпает после 15 минут неактивности
-- Первый запрос после пробуждения может занять 30-60 секунд
-- Для production рекомендуется платный план или использовать keep-alive пинги

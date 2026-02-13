@@ -4,10 +4,6 @@ import { AudioFile } from '../../domain/entities/AudioFile.js';
 import type { IAudioExtractor } from '../../domain/interfaces/IAudioExtractor.js';
 import type { ILogger } from '../../domain/interfaces/ILogger.js';
 
-/**
- * Infrastructure: YouTube Audio Extractor
- * Использует yt-dlp для извлечения аудио
- */
 export class YtDlpExtractor implements IAudioExtractor {
   constructor(private readonly logger: ILogger) {}
 
@@ -15,28 +11,25 @@ export class YtDlpExtractor implements IAudioExtractor {
     this.logger.info('Starting audio extraction', { url });
 
     try {
-      // Сначала получаем метаданные
       const metadata = await this.getVideoMetadata(url);
 
-      // Запускаем yt-dlp для извлечения аудио
       const ytdlp = spawn('yt-dlp', [
         '--extract-audio',
         '--audio-format',
         'opus',
         '--audio-quality',
-        '32K', // Оптимально для речи
-        '--no-playlist', // Не скачивать плейлисты
+        '32K',
+        '--no-playlist',
         '--no-warnings',
         '--no-call-home',
         '--no-check-certificate',
         '--prefer-free-formats',
         '--youtube-skip-dash-manifest',
         '-o',
-        '-', // Вывод в stdout
+        '-',
         url,
       ]);
 
-      // Обработка ошибок
       let errorOutput = '';
       ytdlp.stderr.on('data', (data) => {
         errorOutput += data.toString();
@@ -69,9 +62,6 @@ export class YtDlpExtractor implements IAudioExtractor {
     }
   }
 
-  /**
-   * Получает метаданные видео через yt-dlp
-   */
   private async getVideoMetadata(url: string): Promise<{ title: string; duration: number }> {
     return new Promise((resolve, reject) => {
       const ytdlp = spawn('yt-dlp', [
@@ -117,23 +107,20 @@ export class YtDlpExtractor implements IAudioExtractor {
     });
   }
 
-  /**
-   * Парсит ошибки yt-dlp для понятных сообщений
-   */
   private parseYtDlpError(errorOutput: string): string {
     if (errorOutput.includes('Private video')) {
-      return 'Это приватное видео. Невозможно извлечь аудио.';
+      return 'This is a private video. Cannot extract audio.';
     }
     if (errorOutput.includes('age')) {
-      return 'Видео с возрастными ограничениями. Невозможно извлечь аудио.';
+      return 'Age-restricted video. Cannot extract audio.';
     }
     if (errorOutput.includes('not available')) {
-      return 'Видео недоступно или удалено.';
+      return 'Video is unavailable or deleted.';
     }
     if (errorOutput.includes('copyright')) {
-      return 'Видео заблокировано из-за авторских прав.';
+      return 'Video is blocked due to copyright.';
     }
 
-    return 'Не удалось извлечь аудио. Проверьте ссылку.';
+    return 'Failed to extract audio. Check the link.';
   }
 }
