@@ -3,7 +3,7 @@ services:
     name: audio-drop-bot
     runtime: docker
     plan: free
-    region: frankfurt  # Или другой ближайший регион
+    region: frankfurt
     envVars:
       - key: NODE_ENV
         value: production
@@ -12,7 +12,7 @@ services:
       - key: PORT
         value: 3000
       - key: BOT_TOKEN
-        sync: false  # Устанавливается вручную в панели Render
+        sync: false
     healthCheckPath: /health
     autoDeploy: true
     branch: main

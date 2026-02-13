@@ -5,7 +5,16 @@ import type { IAudioExtractor } from '../../domain/interfaces/IAudioExtractor.js
 import type { ILogger } from '../../domain/interfaces/ILogger.js';
 
 export class YtDlpExtractor implements IAudioExtractor {
-  constructor(private readonly logger: ILogger) {}
+  constructor(private readonly logger: ILogger) {
+    this.logVersion();
+  }
+
+  private logVersion(): void {
+    const ytdlp = spawn('yt-dlp', ['--version']);
+    ytdlp.stdout.on('data', (data) => {
+      this.logger.info(`yt-dlp version: ${data.toString().trim()}`);
+    });
+  }
 
   async extractAudio(url: string): Promise<AudioFile> {
     this.logger.info('Starting audio extraction', { url });
@@ -25,6 +34,8 @@ export class YtDlpExtractor implements IAudioExtractor {
         '--no-check-certificate',
         '--prefer-free-formats',
         '--youtube-skip-dash-manifest',
+        '--user-agent',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         '-o',
         '-',
         url,
@@ -69,6 +80,8 @@ export class YtDlpExtractor implements IAudioExtractor {
         '--no-warnings',
         '--no-playlist',
         '--skip-download',
+        '--user-agent',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         url,
       ]);
 
@@ -85,6 +98,10 @@ export class YtDlpExtractor implements IAudioExtractor {
 
       ytdlp.on('close', (code) => {
         if (code !== 0) {
+          this.logger.error('yt-dlp metadata extraction failed', new Error(errorOutput), {
+            url,
+            exitCode: code,
+          });
           const errorMessage = this.parseYtDlpError(errorOutput);
           reject(new Error(errorMessage));
           return;
@@ -97,11 +114,13 @@ export class YtDlpExtractor implements IAudioExtractor {
             duration: metadata.duration || 0,
           });
         } catch (error) {
+          this.logger.error('Failed to parse metadata JSON', error, { url });
           reject(new Error('Failed to parse video metadata'));
         }
       });
 
       ytdlp.on('error', (error) => {
+        this.logger.error('yt-dlp process error', error, { url });
         reject(new Error(`Failed to execute yt-dlp: ${error.message}`));
       });
     });
