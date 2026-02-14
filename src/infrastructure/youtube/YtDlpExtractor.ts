@@ -53,24 +53,12 @@ export class YtDlpExtractor implements IAudioExtractor {
         args.push('--proxy', this.proxyUrl);
       }
 
-      // Choose client based on available auth
       if (this.cookiesPath) {
         args.push('--cookies', this.cookiesPath);
+      }
 
-        // Web client needs JS runtime for cookies
-        args.push('--js-runtimes', 'node:/usr/local/bin/node');
-        args.push('--remote-components', 'ejs:github');
-
-        const extractorArgs = this.poToken
-          ? `youtube:player_client=web;po_token=${this.poToken}`
-          : 'youtube:player_client=web';
-        args.push('--extractor-args', extractorArgs);
-      } else {
-        // iOS client: no cookies, no JS runtime, no PO Token needed
-        const extractorArgs = this.poToken
-          ? `youtube:player_client=ios;po_token=${this.poToken}`
-          : 'youtube:player_client=ios';
-        args.push('--extractor-args', extractorArgs);
+      if (this.poToken) {
+        args.push('--extractor-args', `youtube:po_token=${this.poToken}`);
       }
 
       args.push('-o', '-', url);
@@ -117,24 +105,12 @@ export class YtDlpExtractor implements IAudioExtractor {
         args.push('--proxy', this.proxyUrl);
       }
 
-      // Choose client based on available auth
       if (this.cookiesPath) {
         args.push('--cookies', this.cookiesPath);
+      }
 
-        // Web client needs JS runtime for cookies
-        args.push('--js-runtimes', 'node:/usr/local/bin/node');
-        args.push('--remote-components', 'ejs:github');
-
-        const extractorArgs = this.poToken
-          ? `youtube:player_client=web;po_token=${this.poToken}`
-          : 'youtube:player_client=web';
-        args.push('--extractor-args', extractorArgs);
-      } else {
-        // iOS client: no cookies, no JS runtime, no PO Token needed
-        const extractorArgs = this.poToken
-          ? `youtube:player_client=ios;po_token=${this.poToken}`
-          : 'youtube:player_client=ios';
-        args.push('--extractor-args', extractorArgs);
+      if (this.poToken) {
+        args.push('--extractor-args', `youtube:po_token=${this.poToken}`);
       }
 
       args.push(url);
@@ -184,13 +160,17 @@ export class YtDlpExtractor implements IAudioExtractor {
       return 'This is a private video. Cannot extract audio.';
     }
     if (errorOutput.includes('age')) {
-      return 'Age-restricted video. Cannot extract audio.';
+      const hint = this.cookiesPath ? '' : ' (YouTube cookies required - add YOUTUBE_COOKIES to env)';
+      return `Age-restricted video. Cannot extract audio${hint}.`;
     }
     if (errorOutput.includes('not available')) {
       return 'Video is unavailable or deleted.';
     }
     if (errorOutput.includes('copyright')) {
       return 'Video is blocked due to copyright.';
+    }
+    if (errorOutput.includes('Sign in')) {
+      return 'YouTube requires authentication. Add YOUTUBE_COOKIES to environment.';
     }
 
     return 'Failed to extract audio. Check the link.';
