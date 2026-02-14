@@ -12,6 +12,7 @@ export class YtDlpExtractor implements IAudioExtractor {
     private readonly logger: ILogger,
     private readonly proxyUrl?: string,
     youtubeCookies?: string,
+    private readonly poToken?: string,
   ) {
     if (proxyUrl) {
       this.logger.info(`Using WARP proxy: ${proxyUrl}`);
@@ -21,6 +22,10 @@ export class YtDlpExtractor implements IAudioExtractor {
       this.cookiesPath = '/tmp/youtube_cookies.txt';
       writeFileSync(this.cookiesPath, youtubeCookies);
       this.logger.info('YouTube cookies loaded');
+    }
+
+    if (poToken) {
+      this.logger.info('YouTube PO Token configured');
     }
 
     this.logVersion();
@@ -57,18 +62,25 @@ export class YtDlpExtractor implements IAudioExtractor {
         args.push('--proxy', this.proxyUrl);
       }
 
+      // Choose client based on available auth
       if (this.cookiesPath) {
         args.push('--cookies', this.cookiesPath);
+
+        // Web client needs JS runtime for cookies
+        args.push('--js-runtimes', 'node:/usr/local/bin/node');
+        args.push('--remote-components', 'ejs:github');
+
+        const extractorArgs = this.poToken
+          ? `youtube:player_client=web;po_token=${this.poToken}`
+          : 'youtube:player_client=web';
+        args.push('--extractor-args', extractorArgs);
+      } else {
+        // iOS client: no cookies, no JS runtime, no PO Token needed
+        const extractorArgs = this.poToken
+          ? `youtube:player_client=ios;po_token=${this.poToken}`
+          : 'youtube:player_client=ios';
+        args.push('--extractor-args', extractorArgs);
       }
-
-      // Enable Node.js runtime for JS challenges
-      args.push('--js-runtimes', 'node:/usr/local/bin/node');
-
-      // Enable remote JS challenge solver (required for signature solving)
-      args.push('--remote-components', 'ejs:github');
-
-      // Use web client with cookies support
-      args.push('--extractor-args', 'youtube:player_client=web');
 
       args.push('-o', '-', url);
 
@@ -115,18 +127,25 @@ export class YtDlpExtractor implements IAudioExtractor {
         this.logger.debug('Using proxy for metadata', { proxy: this.proxyUrl });
       }
 
+      // Choose client based on available auth
       if (this.cookiesPath) {
         args.push('--cookies', this.cookiesPath);
+
+        // Web client needs JS runtime for cookies
+        args.push('--js-runtimes', 'node:/usr/local/bin/node');
+        args.push('--remote-components', 'ejs:github');
+
+        const extractorArgs = this.poToken
+          ? `youtube:player_client=web;po_token=${this.poToken}`
+          : 'youtube:player_client=web';
+        args.push('--extractor-args', extractorArgs);
+      } else {
+        // iOS client: no cookies, no JS runtime, no PO Token needed
+        const extractorArgs = this.poToken
+          ? `youtube:player_client=ios;po_token=${this.poToken}`
+          : 'youtube:player_client=ios';
+        args.push('--extractor-args', extractorArgs);
       }
-
-      // Enable Node.js runtime for JS challenges
-      args.push('--js-runtimes', 'node:/usr/local/bin/node');
-
-      // Enable remote JS challenge solver (required for signature solving)
-      args.push('--remote-components', 'ejs:github');
-
-      // Use web client with cookies support
-      args.push('--extractor-args', 'youtube:player_client=web');
 
       args.push(url);
 

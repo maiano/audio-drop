@@ -16,7 +16,12 @@ async function bootstrap() {
   });
 
   try {
-    const audioExtractor = new YtDlpExtractor(logger, env.WARP_PROXY_URL, env.YOUTUBE_COOKIES);
+    const audioExtractor = new YtDlpExtractor(
+      logger,
+      env.WARP_PROXY_URL,
+      env.YOUTUBE_COOKIES,
+      env.YOUTUBE_PO_TOKEN,
+    );
     const telegramBot = new TelegramBot(env.BOT_TOKEN, logger);
     const messageHandler = new MessageHandler(telegramBot, audioExtractor, logger);
 

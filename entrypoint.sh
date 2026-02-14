@@ -78,6 +78,21 @@ NODE_VERSION=$(node --version 2>/dev/null || echo "not found")
 echo "Node.js path: $NODE_PATH"
 echo "Node.js version: $NODE_VERSION"
 
+# Test iOS client if requested (doesn't need cookies or PO Token)
+if [ "$TEST_IOS_CLIENT" = "true" ]; then
+  echo "🧪 Testing iOS client with WARP proxy..."
+  yt-dlp \
+    --proxy socks5://localhost:1080 \
+    --extractor-args "youtube:player_client=ios" \
+    --dump-json \
+    --no-warnings \
+    "https://youtu.be/ELKbtFljucQ" | head -20
+  echo "✅ Test complete"
+  echo "Sleeping for 2 minutes to review logs..."
+  sleep 120
+  exit 0
+fi
+
 echo "🤖 Starting Telegram bot..."
 cd /app
 

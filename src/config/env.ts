@@ -7,6 +7,7 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   WARP_PROXY_URL: z.string().optional(),
   YOUTUBE_COOKIES: z.string().optional(),
+  YOUTUBE_PO_TOKEN: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
