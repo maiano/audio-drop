@@ -71,6 +71,13 @@ else
   echo "⚠️  WARP proxy check failed, but continuing..."
 fi
 
+# Check Node.js for yt-dlp JS runtime
+echo "🔍 Checking Node.js runtime:"
+NODE_PATH=$(which node)
+NODE_VERSION=$(node --version 2>/dev/null || echo "not found")
+echo "Node.js path: $NODE_PATH"
+echo "Node.js version: $NODE_VERSION"
+
 echo "🤖 Starting Telegram bot..."
 cd /app
 
