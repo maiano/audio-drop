@@ -42,15 +42,15 @@ export class YtDlpExtractor implements IAudioExtractor {
       const args = [
         '--extract-audio',
         '--audio-format',
-        'opus',
+        'best',
         '--audio-quality',
-        '32K',
+        '0',
+        '--format',
+        'bestaudio/best',
         '--no-playlist',
         '--no-warnings',
         '--no-call-home',
         '--no-check-certificate',
-        '--prefer-free-formats',
-        '--youtube-skip-dash-manifest',
       ];
 
       if (this.proxyUrl) {
