@@ -16,7 +16,7 @@ async function bootstrap() {
   });
 
   try {
-    const audioExtractor = new YtDlpExtractor(logger);
+    const audioExtractor = new YtDlpExtractor(logger, env.WARP_PROXY_URL);
     const telegramBot = new TelegramBot(env.BOT_TOKEN, logger);
     const messageHandler = new MessageHandler(telegramBot, audioExtractor, logger);
 

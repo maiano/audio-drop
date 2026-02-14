@@ -11,6 +11,8 @@ services:
         value: info
       - key: PORT
         value: 3000
+      - key: WARP_PROXY_URL
+        value: socks5://localhost:1080
       - key: BOT_TOKEN
         sync: false
     healthCheckPath: /health

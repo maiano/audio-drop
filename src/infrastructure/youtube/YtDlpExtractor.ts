@@ -5,7 +5,13 @@ import type { IAudioExtractor } from '../../domain/interfaces/IAudioExtractor.js
 import type { ILogger } from '../../domain/interfaces/ILogger.js';
 
 export class YtDlpExtractor implements IAudioExtractor {
-  constructor(private readonly logger: ILogger) {
+  constructor(
+    private readonly logger: ILogger,
+    private readonly proxyUrl?: string,
+  ) {
+    if (proxyUrl) {
+      this.logger.info(`Using WARP proxy: ${proxyUrl}`);
+    }
     this.logVersion();
   }
 
@@ -22,7 +28,7 @@ export class YtDlpExtractor implements IAudioExtractor {
     try {
       const metadata = await this.getVideoMetadata(url);
 
-      const ytdlp = spawn('yt-dlp', [
+      const args = [
         '--extract-audio',
         '--audio-format',
         'opus',
@@ -34,16 +40,15 @@ export class YtDlpExtractor implements IAudioExtractor {
         '--no-check-certificate',
         '--prefer-free-formats',
         '--youtube-skip-dash-manifest',
-        '--extractor-args',
-        'youtube:player_client=android_embedded,android_creator,android_vr,web_creator',
-        '--extractor-args',
-        'youtube:skip=dash,hls',
-        '--age-limit',
-        '0',
-        '-o',
-        '-',
-        url,
-      ]);
+      ];
+
+      if (this.proxyUrl) {
+        args.push('--proxy', this.proxyUrl);
+      }
+
+      args.push('-o', '-', url);
+
+      const ytdlp = spawn('yt-dlp', args);
 
       let errorOutput = '';
       ytdlp.stderr.on('data', (data) => {
@@ -79,19 +84,20 @@ export class YtDlpExtractor implements IAudioExtractor {
 
   private async getVideoMetadata(url: string): Promise<{ title: string; duration: number }> {
     return new Promise((resolve, reject) => {
-      const ytdlp = spawn('yt-dlp', [
+      const args = [
         '--dump-json',
         '--no-warnings',
         '--no-playlist',
         '--skip-download',
-        '--extractor-args',
-        'youtube:player_client=android_embedded,android_creator,android_vr,web_creator',
-        '--extractor-args',
-        'youtube:skip=dash,hls',
-        '--age-limit',
-        '0',
-        url,
-      ]);
+      ];
+
+      if (this.proxyUrl) {
+        args.push('--proxy', this.proxyUrl);
+      }
+
+      args.push(url);
+
+      const ytdlp = spawn('yt-dlp', args);
 
       let output = '';
       let errorOutput = '';
