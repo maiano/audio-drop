@@ -64,6 +64,9 @@ export class YtDlpExtractor implements IAudioExtractor {
       // Enable Node.js runtime for JS challenges
       args.push('--js-runtimes', 'node:/usr/local/bin/node');
 
+      // Enable remote JS challenge solver (required for signature solving)
+      args.push('--remote-components', 'ejs:github');
+
       // Use web client with cookies support
       args.push('--extractor-args', 'youtube:player_client=web');
 
@@ -118,6 +121,9 @@ export class YtDlpExtractor implements IAudioExtractor {
 
       // Enable Node.js runtime for JS challenges
       args.push('--js-runtimes', 'node:/usr/local/bin/node');
+
+      // Enable remote JS challenge solver (required for signature solving)
+      args.push('--remote-components', 'ejs:github');
 
       // Use web client with cookies support
       args.push('--extractor-args', 'youtube:player_client=web');
