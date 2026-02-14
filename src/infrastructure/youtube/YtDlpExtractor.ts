@@ -51,8 +51,6 @@ export class YtDlpExtractor implements IAudioExtractor {
         '--no-warnings',
         '--no-call-home',
         '--no-check-certificate',
-        '--extractor-args',
-        'youtube:player_client=android,ios',
       ];
 
       if (this.proxyUrl) {
@@ -61,6 +59,7 @@ export class YtDlpExtractor implements IAudioExtractor {
 
       if (this.cookiesPath) {
         args.push('--cookies', this.cookiesPath);
+        args.push('--extractor-args', 'youtube:player_client=web');
       }
 
       args.push('-o', '-', url);
@@ -101,13 +100,7 @@ export class YtDlpExtractor implements IAudioExtractor {
 
   private async getVideoMetadata(url: string): Promise<{ title: string; duration: number }> {
     return new Promise((resolve, reject) => {
-      const args = [
-        '--dump-json',
-        '--no-playlist',
-        '--skip-download',
-        '--extractor-args',
-        'youtube:player_client=android,ios',
-      ];
+      const args = ['--dump-json', '--no-playlist', '--skip-download'];
 
       if (this.proxyUrl) {
         args.push('--proxy', this.proxyUrl);
@@ -115,6 +108,7 @@ export class YtDlpExtractor implements IAudioExtractor {
 
       if (this.cookiesPath) {
         args.push('--cookies', this.cookiesPath);
+        args.push('--extractor-args', 'youtube:player_client=web');
       }
 
       args.push(url);
