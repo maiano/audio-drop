@@ -1,17 +1,28 @@
 import { spawn } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
 import type { Readable } from 'node:stream';
 import { AudioFile } from '../../domain/entities/AudioFile.js';
 import type { IAudioExtractor } from '../../domain/interfaces/IAudioExtractor.js';
 import type { ILogger } from '../../domain/interfaces/ILogger.js';
 
 export class YtDlpExtractor implements IAudioExtractor {
+  private cookiesPath?: string;
+
   constructor(
     private readonly logger: ILogger,
     private readonly proxyUrl?: string,
+    youtubeCookies?: string,
   ) {
     if (proxyUrl) {
       this.logger.info(`Using WARP proxy: ${proxyUrl}`);
     }
+
+    if (youtubeCookies) {
+      this.cookiesPath = '/tmp/youtube_cookies.txt';
+      writeFileSync(this.cookiesPath, youtubeCookies);
+      this.logger.info('YouTube cookies loaded');
+    }
+
     this.logVersion();
   }
 
@@ -44,6 +55,10 @@ export class YtDlpExtractor implements IAudioExtractor {
 
       if (this.proxyUrl) {
         args.push('--proxy', this.proxyUrl);
+      }
+
+      if (this.cookiesPath) {
+        args.push('--cookies', this.cookiesPath);
       }
 
       args.push('-o', '-', url);
@@ -93,6 +108,10 @@ export class YtDlpExtractor implements IAudioExtractor {
 
       if (this.proxyUrl) {
         args.push('--proxy', this.proxyUrl);
+      }
+
+      if (this.cookiesPath) {
+        args.push('--cookies', this.cookiesPath);
       }
 
       args.push(url);
