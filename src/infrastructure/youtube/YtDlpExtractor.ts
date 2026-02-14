@@ -51,6 +51,8 @@ export class YtDlpExtractor implements IAudioExtractor {
         '--no-warnings',
         '--no-call-home',
         '--no-check-certificate',
+        '--extractor-args',
+        'youtube:player_client=android,ios',
       ];
 
       if (this.proxyUrl) {
@@ -99,7 +101,13 @@ export class YtDlpExtractor implements IAudioExtractor {
 
   private async getVideoMetadata(url: string): Promise<{ title: string; duration: number }> {
     return new Promise((resolve, reject) => {
-      const args = ['--dump-json', '--no-playlist', '--skip-download'];
+      const args = [
+        '--dump-json',
+        '--no-playlist',
+        '--skip-download',
+        '--extractor-args',
+        'youtube:player_client=android,ios',
+      ];
 
       if (this.proxyUrl) {
         args.push('--proxy', this.proxyUrl);

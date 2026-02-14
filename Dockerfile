@@ -21,6 +21,8 @@ RUN apk add --no-cache \
     wget \
     wireguard-tools \
     iptables \
+    nodejs \
+    npm \
     && pip3 install --break-system-packages --no-cache-dir --upgrade yt-dlp
 
 WORKDIR /tmp
