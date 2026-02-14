@@ -99,12 +99,7 @@ export class YtDlpExtractor implements IAudioExtractor {
 
   private async getVideoMetadata(url: string): Promise<{ title: string; duration: number }> {
     return new Promise((resolve, reject) => {
-      const args = [
-        '--dump-json',
-        '--no-warnings',
-        '--no-playlist',
-        '--skip-download',
-      ];
+      const args = ['--dump-json', '--no-playlist', '--skip-download'];
 
       if (this.proxyUrl) {
         args.push('--proxy', this.proxyUrl);
@@ -126,7 +121,9 @@ export class YtDlpExtractor implements IAudioExtractor {
       });
 
       ytdlp.stderr.on('data', (data) => {
-        errorOutput += data.toString();
+        const stderr = data.toString();
+        errorOutput += stderr;
+        this.logger.debug('yt-dlp stderr', { stderr: stderr.trim() });
       });
 
       ytdlp.on('close', (code) => {
@@ -134,6 +131,7 @@ export class YtDlpExtractor implements IAudioExtractor {
           this.logger.error('yt-dlp metadata extraction failed', new Error(errorOutput), {
             url,
             exitCode: code,
+            fullError: errorOutput,
           });
           const errorMessage = this.parseYtDlpError(errorOutput);
           reject(new Error(errorMessage));
