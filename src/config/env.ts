@@ -5,7 +5,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-  WARP_PROXY_URL: z.string().optional(),
+  PROXY_URL: z.string().optional(),
   YOUTUBE_COOKIES: z.string().optional(),
   YOUTUBE_PO_TOKEN: z.string().optional(),
 });

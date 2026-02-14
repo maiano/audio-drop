@@ -5,10 +5,11 @@ Telegram bot for extracting audio from YouTube videos.
 ## Features
 
 - Extract audio from YouTube videos
-- Optimized Opus format (32kbps) for speech
+- Best quality audio format
 - Direct streaming to Telegram (no disk storage)
 - Link validation and video availability check
 - Concurrent request protection per user
+- Optional proxy support (residential recommended)
 - Clean Architecture with full TypeScript typing
 
 ## Tech Stack
@@ -61,11 +62,28 @@ docker compose logs -f
 ## Environment Variables
 
 ```env
+# Required
 BOT_TOKEN=your_bot_token_here
+
+# Optional
 PORT=3000
 NODE_ENV=production
 LOG_LEVEL=info
+PROXY_URL=socks5://user:pass@host:port  # Residential proxy recommended
+YOUTUBE_COOKIES=...                      # For age-restricted content
+YOUTUBE_PO_TOKEN=...                     # For bypassing bot detection
 ```
+
+### Proxy Configuration
+
+For reliable YouTube access, especially from cloud/datacenter IPs, use a **residential proxy**:
+
+- **Bright Data** - https://brightdata.com
+- **Smartproxy** - https://smartproxy.com
+- **Oxylabs** - https://oxylabs.io
+- **Proxy6** - https://proxy6.net
+
+Format: `socks5://user:pass@host:port` or `http://user:pass@host:port`
 
 ## Deployment
 
@@ -111,9 +129,8 @@ src/
 
 ### Limitations
 
-- Maximum duration: 2 hours
-- Public videos only
-- Format: Opus (optimized for speech)
+- Public videos only (cookies needed for age-restricted)
+- Cloud/datacenter IPs may be blocked by YouTube (use residential proxy)
 
 ## Development Commands
 

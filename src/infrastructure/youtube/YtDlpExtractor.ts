@@ -15,27 +15,18 @@ export class YtDlpExtractor implements IAudioExtractor {
     private readonly poToken?: string,
   ) {
     if (proxyUrl) {
-      this.logger.info(`Using WARP proxy: ${proxyUrl}`);
+      this.logger.info('Proxy configured');
     }
 
     if (youtubeCookies) {
       this.cookiesPath = '/tmp/youtube_cookies.txt';
       writeFileSync(this.cookiesPath, youtubeCookies);
-      this.logger.info('YouTube cookies loaded');
+      this.logger.info('Cookies configured');
     }
 
     if (poToken) {
-      this.logger.info('YouTube PO Token configured');
+      this.logger.info('PO Token configured');
     }
-
-    this.logVersion();
-  }
-
-  private logVersion(): void {
-    const ytdlp = spawn('yt-dlp', ['--version']);
-    ytdlp.stdout.on('data', (data) => {
-      this.logger.info(`yt-dlp version: ${data.toString().trim()}`);
-    });
   }
 
   async extractAudio(url: string): Promise<AudioFile> {
@@ -120,11 +111,10 @@ export class YtDlpExtractor implements IAudioExtractor {
 
   private async getVideoMetadata(url: string): Promise<{ title: string; duration: number }> {
     return new Promise((resolve, reject) => {
-      const args = ['--dump-json', '--no-playlist', '--skip-download', '--verbose'];
+      const args = ['--dump-json', '--no-playlist', '--skip-download'];
 
       if (this.proxyUrl) {
         args.push('--proxy', this.proxyUrl);
-        this.logger.debug('Using proxy for metadata', { proxy: this.proxyUrl });
       }
 
       // Choose client based on available auth
@@ -159,19 +149,13 @@ export class YtDlpExtractor implements IAudioExtractor {
       });
 
       ytdlp.stderr.on('data', (data) => {
-        const stderr = data.toString();
-        errorOutput += stderr;
-        this.logger.debug('yt-dlp stderr', { stderr: stderr.trim() });
+        errorOutput += data.toString();
       });
 
       ytdlp.on('close', (code) => {
         if (code !== 0) {
-          this.logger.error('yt-dlp metadata extraction failed', new Error(errorOutput), {
-            url,
-            exitCode: code,
-            fullError: errorOutput,
-          });
           const errorMessage = this.parseYtDlpError(errorOutput);
+          this.logger.error('Metadata extraction failed', new Error(errorMessage));
           reject(new Error(errorMessage));
           return;
         }

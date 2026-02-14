@@ -8,11 +8,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: LOG_LEVEL
-        value: debug
+        value: info
       - key: PORT
         value: 3000
-      - key: WARP_PROXY_URL
-        value: socks5://localhost:1080
       - key: BOT_TOKEN
         sync: false
     healthCheckPath: /health

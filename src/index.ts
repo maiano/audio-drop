@@ -18,7 +18,7 @@ async function bootstrap() {
   try {
     const audioExtractor = new YtDlpExtractor(
       logger,
-      env.WARP_PROXY_URL,
+      env.PROXY_URL,
       env.YOUTUBE_COOKIES,
       env.YOUTUBE_PO_TOKEN,
     );
