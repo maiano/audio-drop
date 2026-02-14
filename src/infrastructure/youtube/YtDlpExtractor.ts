@@ -59,8 +59,10 @@ export class YtDlpExtractor implements IAudioExtractor {
 
       if (this.cookiesPath) {
         args.push('--cookies', this.cookiesPath);
-        args.push('--extractor-args', 'youtube:player_client=web');
       }
+
+      // Use Android client to bypass JS runtime requirements
+      args.push('--extractor-args', 'youtube:player_client=android');
 
       args.push('-o', '-', url);
 
@@ -109,8 +111,10 @@ export class YtDlpExtractor implements IAudioExtractor {
 
       if (this.cookiesPath) {
         args.push('--cookies', this.cookiesPath);
-        args.push('--extractor-args', 'youtube:player_client=web');
       }
+
+      // Use Android client to bypass JS runtime requirements
+      args.push('--extractor-args', 'youtube:player_client=android');
 
       args.push(url);
 
