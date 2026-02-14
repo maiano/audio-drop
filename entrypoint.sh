@@ -51,10 +51,22 @@ WIREPROXY_PID=$!
 echo "⏳ Waiting for WARP proxy..."
 sleep 5
 
-# Test connection
+# Test connection and diagnostics
+echo "🔍 Testing WARP proxy..."
 if timeout 10 wget -q --spider --proxy=socks5://localhost:1080 https://www.cloudflare.com/cdn-cgi/trace 2>/dev/null; then
   echo "✅ WARP proxy is ready!"
-  wget -qO- --proxy=socks5://localhost:1080 https://www.cloudflare.com/cdn-cgi/trace 2>/dev/null | grep -E "warp=|colo="
+  echo "📊 WARP Info:"
+  wget -qO- --proxy=socks5://localhost:1080 https://www.cloudflare.com/cdn-cgi/trace 2>/dev/null | grep -E "warp=|colo=|ip="
+
+  # Check external IP
+  echo "🌐 External IP via WARP:"
+  IP_OUT=$(wget -qO- --proxy=socks5://localhost:1080 --timeout=10 https://ifconfig.me 2>/dev/null || echo "failed")
+  echo "Proxy IP: $IP_OUT"
+
+  # Test YouTube access
+  echo "🔍 Testing YouTube access:"
+  YT_CODE=$(wget --proxy=socks5://localhost:1080 -S -O /dev/null https://www.youtube.com 2>&1 | grep "HTTP/" | tail -1 | awk '{print $2}' || echo "failed")
+  echo "YouTube HTTP: $YT_CODE"
 else
   echo "⚠️  WARP proxy check failed, but continuing..."
 fi

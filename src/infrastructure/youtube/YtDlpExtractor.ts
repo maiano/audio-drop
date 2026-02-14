@@ -100,10 +100,11 @@ export class YtDlpExtractor implements IAudioExtractor {
 
   private async getVideoMetadata(url: string): Promise<{ title: string; duration: number }> {
     return new Promise((resolve, reject) => {
-      const args = ['--dump-json', '--no-playlist', '--skip-download'];
+      const args = ['--dump-json', '--no-playlist', '--skip-download', '--verbose'];
 
       if (this.proxyUrl) {
         args.push('--proxy', this.proxyUrl);
+        this.logger.debug('Using proxy for metadata', { proxy: this.proxyUrl });
       }
 
       if (this.cookiesPath) {
