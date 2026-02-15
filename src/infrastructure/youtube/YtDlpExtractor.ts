@@ -54,13 +54,16 @@ export class YtDlpExtractor implements IAudioExtractor {
         '--no-check-certificate',
       ];
 
-      // For m4a, force AAC codec (iOS compatibility)
+      // For m4a, force AAC-LC codec with iOS-compatible parameters
       if (codec === 'm4a') {
-        args.push('--postprocessor-args', `ffmpeg:-c:a aac -b:a ${this.getBitrate(quality)}`);
-      }
-
-      // For ultra-low quality, force mono (speech doesn't need stereo)
-      if (quality === 'ultralow') {
+        const channels = quality === 'ultralow' ? '1' : '2';
+        const sampleRate = '44100'; // Standard iOS sample rate
+        args.push(
+          '--postprocessor-args',
+          `ffmpeg:-c:a aac -profile:a aac_low -ar ${sampleRate} -ac ${channels} -b:a ${this.getBitrate(quality)} -movflags +faststart`,
+        );
+      } else if (quality === 'ultralow') {
+        // For opus ultra-low quality, force mono
         args.push('--audio-channels', '1');
       }
 
