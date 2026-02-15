@@ -14,8 +14,17 @@ export class MessageHandler {
     private readonly bot: TelegramBot,
     private readonly audioExtractor: IAudioExtractor,
     private readonly logger: ILogger,
+    private readonly allowedUserIds: number[] = [],
   ) {
     this.processAudioUseCase = new ProcessAudioRequest(audioExtractor, logger);
+  }
+
+  private isUserAllowed(userId: number): boolean {
+    // If whitelist is empty, allow everyone
+    if (this.allowedUserIds.length === 0) {
+      return true;
+    }
+    return this.allowedUserIds.includes(userId);
   }
 
   async handleStart(ctx: Context): Promise<void> {
@@ -88,6 +97,15 @@ For questions: create an issue on GitHub
     const userId = ctx.from.id;
     const chatId = ctx.chat.id;
     const url = ctx.message.text.trim();
+
+    // Check whitelist
+    if (!this.isUserAllowed(userId)) {
+      this.logger.warn('Unauthorized user attempted access', { userId });
+      await ctx.reply(
+        '🔒 This is a private bot.\n\nAccess is restricted to authorized users only.\nIf you believe this is an error, please contact the bot owner.',
+      );
+      return;
+    }
 
     if (this.bot.isUserProcessing(userId)) {
       await ctx.reply('⏳ I am still processing your previous request. Please wait...');

@@ -23,7 +23,7 @@ async function bootstrap() {
       env.YOUTUBE_PO_TOKEN,
     );
     const telegramBot = new TelegramBot(env.BOT_TOKEN, logger);
-    const messageHandler = new MessageHandler(telegramBot, audioExtractor, logger);
+    const messageHandler = new MessageHandler(telegramBot, audioExtractor, logger, env.ALLOWED_USER_IDS);
 
     telegramBot.onCommand('start', (ctx) => messageHandler.handleStart(ctx));
     telegramBot.onCommand('help', (ctx) => messageHandler.handleHelp(ctx));

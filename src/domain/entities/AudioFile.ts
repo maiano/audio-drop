@@ -1,4 +1,5 @@
 import type { Readable } from 'node:stream';
+import { sanitizeFilename } from '../../utils/transliterate.js';
 
 export class AudioFile {
   constructor(
@@ -9,10 +10,7 @@ export class AudioFile {
   ) {}
 
   getFileName(): string {
-    const sanitized = this.title
-      .replace(/[^\w\s-]/g, '')
-      .trim()
-      .replace(/\s+/g, '_');
+    const sanitized = sanitizeFilename(this.title);
     return `${sanitized}.${this.format}`;
   }
 

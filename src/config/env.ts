@@ -8,6 +8,10 @@ const envSchema = z.object({
   PROXY_URL: z.string().optional(),
   YOUTUBE_COOKIES: z.string().optional(),
   YOUTUBE_PO_TOKEN: z.string().optional(),
+  ALLOWED_USER_IDS: z
+    .string()
+    .optional()
+    .transform((val) => (val ? val.split(',').map((id) => Number.parseInt(id.trim(), 10)) : [])),
 });
 
 export type Env = z.infer<typeof envSchema>;
