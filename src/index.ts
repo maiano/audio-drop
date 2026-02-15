@@ -29,6 +29,25 @@ async function bootstrap() {
     telegramBot.onCommand('help', (ctx) => messageHandler.handleHelp(ctx));
     telegramBot.onText((ctx) => messageHandler.handleMessage(ctx));
 
+    // Handle quality selection callbacks
+    telegramBot.onCallbackQuery(/^quality:(best|high|medium|low):(\d+)$/, async (ctx) => {
+      const match = ctx.callbackQuery?.data?.match(/^quality:(best|high|medium|low):(\d+)$/);
+      if (match) {
+        const quality = match[1] as 'best' | 'high' | 'medium' | 'low';
+        const userId = Number.parseInt(match[2], 10);
+        await messageHandler.handleQualityCallback(ctx, quality, userId);
+      }
+    });
+
+    // Handle formats list callback
+    telegramBot.onCallbackQuery(/^formats:(\d+)$/, async (ctx) => {
+      const match = ctx.callbackQuery?.data?.match(/^formats:(\d+)$/);
+      if (match) {
+        const userId = Number.parseInt(match[1], 10);
+        await messageHandler.handleFormatsCallback(ctx, userId);
+      }
+    });
+
     const healthServer = new HealthServer(env.PORT, logger);
     await healthServer.start();
     await telegramBot.start();

@@ -35,6 +35,19 @@ export class TelegramBot {
     });
   }
 
+  onCallbackQuery(pattern: RegExp, handler: (ctx: Context) => Promise<void>): void {
+    this.bot.on('callback_query:data', async (ctx) => {
+      try {
+        if (pattern.test(ctx.callbackQuery.data)) {
+          await handler(ctx);
+        }
+      } catch (error) {
+        this.logger.error('Error handling callback query', error);
+        await ctx.answerCallbackQuery({ text: 'An error occurred. Please try again.' });
+      }
+    });
+  }
+
   isUserProcessing(userId: number): boolean {
     return this.processingUsers.has(userId);
   }

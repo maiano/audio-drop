@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import type { Readable } from 'node:stream';
 import { AudioFile } from '../../domain/entities/AudioFile.js';
-import type { IAudioExtractor } from '../../domain/interfaces/IAudioExtractor.js';
+import type { AudioFormat, AudioQuality, IAudioExtractor } from '../../domain/interfaces/IAudioExtractor.js';
 import type { ILogger } from '../../domain/interfaces/ILogger.js';
 
 export class YtDlpExtractor implements IAudioExtractor {
@@ -29,8 +29,8 @@ export class YtDlpExtractor implements IAudioExtractor {
     }
   }
 
-  async extractAudio(url: string): Promise<AudioFile> {
-    this.logger.info('Starting audio extraction', { url });
+  async extractAudio(url: string, quality: AudioQuality = 'best'): Promise<AudioFile> {
+    this.logger.info('Starting audio extraction', { url, quality });
 
     try {
       const metadata = await this.getVideoMetadata(url);
@@ -40,9 +40,9 @@ export class YtDlpExtractor implements IAudioExtractor {
         '--audio-format',
         'best',
         '--audio-quality',
-        '0',
+        this.getQualityValue(quality),
         '--format',
-        'bestaudio/best',
+        this.getFormatSelector(quality),
         '--no-playlist',
         '--no-warnings',
         '--no-call-home',
@@ -153,6 +153,103 @@ export class YtDlpExtractor implements IAudioExtractor {
         reject(new Error(`Failed to execute yt-dlp: ${error.message}`));
       });
     });
+  }
+
+  async getAvailableFormats(url: string): Promise<AudioFormat[]> {
+    return new Promise((resolve, reject) => {
+      const args = ['--list-formats', '--no-playlist'];
+
+      if (this.proxyUrl) {
+        args.push('--proxy', this.proxyUrl);
+      }
+
+      if (this.cookiesPath) {
+        args.push('--cookies', this.cookiesPath);
+      }
+
+      args.push(url);
+
+      const ytdlp = spawn('yt-dlp', args);
+
+      let output = '';
+      let errorOutput = '';
+
+      ytdlp.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      ytdlp.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+
+      ytdlp.on('close', (code) => {
+        if (code !== 0) {
+          this.logger.error('Failed to get formats', new Error(errorOutput));
+          reject(new Error('Failed to get available formats'));
+          return;
+        }
+
+        const formats = this.parseFormats(output);
+        resolve(formats);
+      });
+
+      ytdlp.on('error', (error) => {
+        this.logger.error('yt-dlp process error', error);
+        reject(new Error(`Failed to execute yt-dlp: ${error.message}`));
+      });
+    });
+  }
+
+  private parseFormats(output: string): AudioFormat[] {
+    const formats: AudioFormat[] = [];
+    const lines = output.split('\n');
+
+    for (const line of lines) {
+      // Match audio-only formats (e.g., "249 webm audio only")
+      if (line.includes('audio only') && !line.includes('video only')) {
+        const match = line.match(/^(\S+)\s+(\S+)\s+.*?(\d+k)?.*$/);
+        if (match) {
+          formats.push({
+            formatId: match[1],
+            ext: match[2],
+            quality: line.includes('audio only') ? 'audio only' : 'unknown',
+            bitrate: match[3] || 'unknown',
+          });
+        }
+      }
+    }
+
+    return formats.slice(0, 10); // Limit to 10 formats
+  }
+
+  private getQualityValue(quality: AudioQuality): string {
+    switch (quality) {
+      case 'best':
+        return '0'; // Best quality
+      case 'high':
+        return '2'; // ~192kbps
+      case 'medium':
+        return '5'; // ~128kbps
+      case 'low':
+        return '7'; // ~64kbps
+      default:
+        return '0';
+    }
+  }
+
+  private getFormatSelector(quality: AudioQuality): string {
+    switch (quality) {
+      case 'best':
+        return 'bestaudio/best';
+      case 'high':
+        return 'bestaudio[abr<=192]/bestaudio/best';
+      case 'medium':
+        return 'bestaudio[abr<=128]/bestaudio/best';
+      case 'low':
+        return 'bestaudio[abr<=64]/bestaudio/best';
+      default:
+        return 'bestaudio/best';
+    }
   }
 
   private parseYtDlpError(errorOutput: string): string {
