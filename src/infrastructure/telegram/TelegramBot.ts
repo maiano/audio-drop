@@ -36,10 +36,15 @@ export class TelegramBot {
   }
 
   onCallbackQuery(pattern: RegExp, handler: (ctx: Context) => Promise<void>): void {
-    this.bot.on('callback_query:data', async (ctx) => {
+    this.bot.on('callback_query:data', async (ctx, next) => {
       try {
+        this.logger.debug('Callback query received', { data: ctx.callbackQuery.data, pattern: pattern.source });
         if (pattern.test(ctx.callbackQuery.data)) {
+          this.logger.debug('Pattern matched, calling handler', { data: ctx.callbackQuery.data });
           await handler(ctx);
+        } else {
+          this.logger.debug('Pattern did not match, passing to next handler', { data: ctx.callbackQuery.data, pattern: pattern.source });
+          await next();
         }
       } catch (error) {
         this.logger.error('Error handling callback query', error);
@@ -78,7 +83,7 @@ export class TelegramBot {
     await this.bot.api.sendMessage(chatId, text);
   }
 
-  async sendChatAction(chatId: number, action: 'upload_voice' | 'typing'): Promise<void> {
+  async sendChatAction(chatId: number, action: 'upload_document' | 'upload_voice' | 'typing'): Promise<void> {
     await this.bot.api.sendChatAction(chatId, action);
   }
 

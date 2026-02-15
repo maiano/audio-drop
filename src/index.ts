@@ -29,13 +29,27 @@ async function bootstrap() {
     telegramBot.onCommand('help', (ctx) => messageHandler.handleHelp(ctx));
     telegramBot.onText((ctx) => messageHandler.handleMessage(ctx));
 
-    // Handle quality selection callbacks
-    telegramBot.onCallbackQuery(/^quality:(best|high|medium|low):(\d+)$/, async (ctx) => {
-      const match = ctx.callbackQuery?.data?.match(/^quality:(best|high|medium|low):(\d+)$/);
+    // Handle codec selection callbacks
+    telegramBot.onCallbackQuery(/^codec:(opus|m4a):(\d+)$/, async (ctx) => {
+      const match = ctx.callbackQuery?.data?.match(/^codec:(opus|m4a):(\d+)$/);
       if (match) {
-        const quality = match[1] as 'best' | 'high' | 'medium' | 'low';
+        const codec = match[1] as 'opus' | 'm4a';
         const userId = Number.parseInt(match[2], 10);
+        await messageHandler.handleCodecCallback(ctx, codec, userId);
+      }
+    });
+
+    // Handle quality selection callbacks
+    telegramBot.onCallbackQuery(/^quality:(best|high|medium|low|ultralow):(\d+)$/, async (ctx) => {
+      logger.info('Quality callback query received', { data: ctx.callbackQuery?.data });
+      const match = ctx.callbackQuery?.data?.match(/^quality:(best|high|medium|low|ultralow):(\d+)$/);
+      if (match) {
+        const quality = match[1] as 'best' | 'high' | 'medium' | 'low' | 'ultralow';
+        const userId = Number.parseInt(match[2], 10);
+        logger.info('Calling handleQualityCallback', { quality, userId });
         await messageHandler.handleQualityCallback(ctx, quality, userId);
+      } else {
+        logger.warn('Quality callback query did not match pattern', { data: ctx.callbackQuery?.data });
       }
     });
 

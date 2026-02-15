@@ -2,13 +2,19 @@ import type { Context } from 'grammy';
 import { InlineKeyboard } from 'grammy';
 import { ProcessAudioRequest } from '../../application/usecases/ProcessAudioRequest.js';
 import { AudioRequest } from '../../domain/entities/AudioRequest.js';
-import type { AudioQuality, IAudioExtractor } from '../../domain/interfaces/IAudioExtractor.js';
+import type { AudioCodec, AudioQuality, IAudioExtractor } from '../../domain/interfaces/IAudioExtractor.js';
 import type { ILogger } from '../../domain/interfaces/ILogger.js';
 import type { TelegramBot } from '../../infrastructure/telegram/TelegramBot.js';
+import { optimizeQualityForDuration } from '../../utils/qualityOptimizer.js';
+
+interface UserSession {
+  url: string;
+  codec: AudioCodec;
+}
 
 export class MessageHandler {
   private processAudioUseCase: ProcessAudioRequest;
-  private userUrls: Map<number, string> = new Map();
+  private userSessions: Map<number, UserSession> = new Map();
 
   constructor(
     private readonly bot: TelegramBot,
@@ -47,7 +53,8 @@ Hi! I'll help you extract audio from YouTube videos with quality selection.
 🏆 Best - Highest available quality
 ⚡ High - ~192kbps
 💾 Medium - ~128kbps
-📱 Low - ~64kbps (smaller file)
+📱 Low - ~64kbps
+🔇 Ultra-Low - ~48kbps mono (for very long content)
 
 Send a link to get started! 🚀
     `.trim();
@@ -76,7 +83,13 @@ Send a link to get started! 🚀
 • High - Good balance (~192kbps)
 • Medium - Smaller size (~128kbps)
 • Low - Minimum size (~64kbps)
+• Ultra-Low - Smallest size (~48kbps mono, for 6+ hour audiobooks)
 • Show Formats - View all available audio formats
+
+*Auto-optimization:*
+• 1.5-3h: Best/High → Medium
+• 3-6h: Best/High/Medium → Low
+• 6+h: Any → Ultra-Low (48k mono)
 
 *Common issues:*
 • "Video unavailable" - video is private or deleted
@@ -133,20 +146,11 @@ For questions: create an issue on GitHub
         return;
       }
 
-      // Store URL for quality selection
-      this.userUrls.set(userId, url);
+      // Store session with opus as default
+      this.userSessions.set(userId, { url, codec: 'opus' });
 
-      // Show quality selection keyboard
-      const keyboard = new InlineKeyboard()
-        .text('🏆 Best Quality', `quality:best:${userId}`)
-        .text('⚡ High (192k)', `quality:high:${userId}`)
-        .row()
-        .text('💾 Medium (128k)', `quality:medium:${userId}`)
-        .text('📱 Low (64k)', `quality:low:${userId}`)
-        .row()
-        .text('📋 Show Formats', `formats:${userId}`);
-
-      await ctx.reply('✅ Video found! Choose audio quality:', { reply_markup: keyboard });
+      // Show format and quality selection keyboard
+      await this.showQualityKeyboard(ctx, userId, 'opus');
       this.bot.stopProcessing(userId);
     } catch (error) {
       this.logger.error('Failed to process message', error, { userId, url });
@@ -161,32 +165,145 @@ For questions: create an issue on GitHub
     }
   }
 
-  async handleQualityCallback(ctx: Context, quality: AudioQuality, userId: number): Promise<void> {
-    const url = this.userUrls.get(userId);
-    if (!url) {
+  private async showQualityKeyboard(ctx: Context, userId: number, selectedCodec: AudioCodec): Promise<void> {
+    const opusSelected = selectedCodec === 'opus';
+    const m4aSelected = selectedCodec === 'm4a';
+
+    const keyboard = new InlineKeyboard()
+      .text(`${opusSelected ? '🤖 Opus ✓' : '🤖 Opus'}`, `codec:opus:${userId}`)
+      .text(`${m4aSelected ? '🍎 M4A ✓' : '🍎 M4A (iOS)'}`, `codec:m4a:${userId}`)
+      .row()
+      .text('🏆 Best', `quality:best:${userId}`)
+      .text('⚡ High', `quality:high:${userId}`)
+      .row()
+      .text('💾 Medium', `quality:medium:${userId}`)
+      .text('📱 Low', `quality:low:${userId}`)
+      .row()
+      .text('🔇 Ultra-Low', `quality:ultralow:${userId}`)
+      .row()
+      .text('📋 Show Formats', `formats:${userId}`);
+
+    const codecInfo = opusSelected
+      ? 'Opus - Better quality, smaller size'
+      : 'M4A (AAC) - iOS compatible for download';
+
+    await ctx.reply(`✅ Video found!\n\n📦 Format: ${codecInfo}\n\nChoose quality:`, {
+      reply_markup: keyboard,
+    });
+  }
+
+  async handleCodecCallback(ctx: Context, codec: AudioCodec, userId: number): Promise<void> {
+    const session = this.userSessions.get(userId);
+    if (!session) {
       await ctx.answerCallbackQuery({ text: '❌ Session expired. Send the link again.' });
       return;
     }
 
+    // Check if codec is already selected
+    if (session.codec === codec) {
+      await ctx.answerCallbackQuery({ text: `${codec.toUpperCase()} already selected` });
+      return;
+    }
+
+    // Update codec in session
+    session.codec = codec;
+    this.userSessions.set(userId, session);
+
+    await ctx.answerCallbackQuery({ text: `Format changed to ${codec.toUpperCase()}` });
+
+    // Update message with new keyboard
+    const codecInfo = codec === 'opus' ? 'Opus - Better quality, smaller size' : 'M4A (AAC) - iOS compatible for download';
+    try {
+      await ctx.editMessageText(`✅ Video found!\n\n📦 Format: ${codecInfo}\n\nChoose quality:`, {
+        reply_markup: this.buildQualityKeyboard(userId, codec),
+      });
+    } catch (error) {
+      this.logger.error('Failed to update message', error);
+    }
+  }
+
+  private buildQualityKeyboard(userId: number, selectedCodec: AudioCodec): InlineKeyboard {
+    const opusSelected = selectedCodec === 'opus';
+    const m4aSelected = selectedCodec === 'm4a';
+
+    return new InlineKeyboard()
+      .text(`${opusSelected ? '🤖 Opus ✓' : '🤖 Opus'}`, `codec:opus:${userId}`)
+      .text(`${m4aSelected ? '🍎 M4A ✓' : '🍎 M4A (iOS)'}`, `codec:m4a:${userId}`)
+      .row()
+      .text('🏆 Best', `quality:best:${userId}`)
+      .text('⚡ High', `quality:high:${userId}`)
+      .row()
+      .text('💾 Medium', `quality:medium:${userId}`)
+      .text('📱 Low', `quality:low:${userId}`)
+      .row()
+      .text('🔇 Ultra-Low', `quality:ultralow:${userId}`)
+      .row()
+      .text('📋 Show Formats', `formats:${userId}`);
+  }
+
+  async handleQualityCallback(ctx: Context, quality: AudioQuality, userId: number): Promise<void> {
+    this.logger.info('Quality callback received', { quality, userId });
+
+    const session = this.userSessions.get(userId);
+    if (!session) {
+      this.logger.warn('Session not found', { userId });
+      await ctx.answerCallbackQuery({ text: '❌ Session expired. Send the link again.' });
+      return;
+    }
+
+    this.logger.info('Session found', { url: session.url, codec: session.codec });
+
     const chatId = ctx.chat?.id;
-    if (!chatId) return;
+    if (!chatId) {
+      this.logger.error('Chat ID not found');
+      return;
+    }
 
     await ctx.answerCallbackQuery({ text: `⏳ Extracting ${quality} quality...` });
+
+    // Remove keyboard and update text to prevent multiple clicks
+    try {
+      await ctx.editMessageText('⏳ Checking video metadata...', { reply_markup: undefined });
+    } catch (error) {
+      this.logger.error('Failed to edit message', error);
+    }
 
     this.bot.startProcessing(userId);
 
     try {
-      await this.bot.sendChatAction(chatId, 'upload_voice');
-      await ctx.editMessageText('⏳ Extracting audio... This may take some time.');
+      // Get metadata first to optimize quality
+      const metadata = await this.audioExtractor.getMetadata(session.url);
 
-      const audioFile = await this.audioExtractor.extractAudio(url, quality);
-
-      if (!audioFile.isWithinDurationLimit()) {
-        await ctx.editMessageText('❌ Video is too long (over 2 hours).\n\nTry a shorter video.');
+      // Check duration limit
+      const maxDuration = 43200; // 12 hours
+      if (metadata.duration > maxDuration) {
+        await ctx.editMessageText(
+          `❌ Video is too long (${(metadata.duration / 3600).toFixed(1)} hours).\n\nMaximum supported duration is 12 hours.`,
+        );
+        this.bot.stopProcessing(userId);
         return;
       }
 
-      await this.bot.sendChatAction(chatId, 'upload_voice');
+      // Optimize quality for long content
+      const optimized = optimizeQualityForDuration(quality, metadata.duration);
+
+      if (optimized.adjusted) {
+        this.logger.info('Quality auto-adjusted for duration', {
+          userId,
+          originalQuality: quality,
+          adjustedQuality: optimized.quality,
+          durationHours: (metadata.duration / 3600).toFixed(1),
+        });
+
+        await ctx.editMessageText(`ℹ️ ${optimized.reason}\n\n⏳ Extracting audio...`);
+      } else {
+        await ctx.editMessageText('⏳ Extracting audio... This may take some time.');
+      }
+
+      await this.bot.sendChatAction(chatId, 'upload_document');
+      const audioFile = await this.audioExtractor.extractAudio(session.url, optimized.quality, session.codec);
+
+      await this.bot.sendChatAction(chatId, 'upload_document');
       await this.bot.sendAudio(chatId, audioFile.stream, audioFile.getFileName(), {
         title: audioFile.title,
         duration: audioFile.duration,
@@ -199,9 +316,9 @@ For questions: create an issue on GitHub
       });
 
       await ctx.editMessageText('✅ Done! Enjoy listening 🎧');
-      this.userUrls.delete(userId);
+      this.userSessions.delete(userId);
     } catch (error) {
-      this.logger.error('Failed to extract audio', error, { userId, url, quality });
+      this.logger.error('Failed to extract audio', error, { userId, url: session.url, quality });
 
       const errorMessage =
         error instanceof Error
@@ -215,8 +332,8 @@ For questions: create an issue on GitHub
   }
 
   async handleFormatsCallback(ctx: Context, userId: number): Promise<void> {
-    const url = this.userUrls.get(userId);
-    if (!url) {
+    const session = this.userSessions.get(userId);
+    if (!session) {
       await ctx.answerCallbackQuery({ text: '❌ Session expired. Send the link again.' });
       return;
     }
@@ -224,7 +341,7 @@ For questions: create an issue on GitHub
     await ctx.answerCallbackQuery({ text: '🔍 Fetching formats...' });
 
     try {
-      const formats = await this.audioExtractor.getAvailableFormats(url);
+      const formats = await this.audioExtractor.getAvailableFormats(session.url);
 
       if (formats.length === 0) {
         await ctx.reply('❌ No audio formats found.');
@@ -239,7 +356,7 @@ For questions: create an issue on GitHub
 
       await ctx.reply(message, { parse_mode: 'Markdown' });
     } catch (error) {
-      this.logger.error('Failed to get formats', error, { userId, url });
+      this.logger.error('Failed to get formats', error, { userId, url: session.url });
       await ctx.reply('❌ Failed to get available formats.');
     }
   }

@@ -14,7 +14,12 @@ export class AudioFile {
     return `${sanitized}.${this.format}`;
   }
 
-  isWithinDurationLimit(maxDurationSeconds = 7200): boolean {
+  isWithinDurationLimit(maxDurationSeconds = 43200): boolean {
+    // Default 12 hours (enough for audiobooks)
     return this.duration <= maxDurationSeconds;
+  }
+
+  getDurationHours(): number {
+    return this.duration / 3600;
   }
 }

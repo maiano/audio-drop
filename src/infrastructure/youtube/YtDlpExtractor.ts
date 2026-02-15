@@ -2,7 +2,12 @@ import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import type { Readable } from 'node:stream';
 import { AudioFile } from '../../domain/entities/AudioFile.js';
-import type { AudioFormat, AudioQuality, IAudioExtractor } from '../../domain/interfaces/IAudioExtractor.js';
+import type {
+  AudioCodec,
+  AudioFormat,
+  AudioQuality,
+  IAudioExtractor,
+} from '../../domain/interfaces/IAudioExtractor.js';
 import type { ILogger } from '../../domain/interfaces/ILogger.js';
 
 export class YtDlpExtractor implements IAudioExtractor {
@@ -29,8 +34,8 @@ export class YtDlpExtractor implements IAudioExtractor {
     }
   }
 
-  async extractAudio(url: string, quality: AudioQuality = 'best'): Promise<AudioFile> {
-    this.logger.info('Starting audio extraction', { url, quality });
+  async extractAudio(url: string, quality: AudioQuality = 'best', codec: AudioCodec = 'opus'): Promise<AudioFile> {
+    this.logger.info('Starting audio extraction', { url, quality, codec });
 
     try {
       const metadata = await this.getVideoMetadata(url);
@@ -38,7 +43,7 @@ export class YtDlpExtractor implements IAudioExtractor {
       const args = [
         '--extract-audio',
         '--audio-format',
-        'best',
+        codec === 'opus' ? 'opus' : 'm4a',
         '--audio-quality',
         this.getQualityValue(quality),
         '--format',
@@ -48,6 +53,16 @@ export class YtDlpExtractor implements IAudioExtractor {
         '--no-call-home',
         '--no-check-certificate',
       ];
+
+      // For m4a, force AAC codec (iOS compatibility)
+      if (codec === 'm4a') {
+        args.push('--postprocessor-args', `ffmpeg:-c:a aac -b:a ${this.getBitrate(quality)}`);
+      }
+
+      // For ultra-low quality, force mono (speech doesn't need stereo)
+      if (quality === 'ultralow') {
+        args.push('--audio-channels', '1');
+      }
 
       if (this.proxyUrl) {
         args.push('--proxy', this.proxyUrl);
@@ -81,7 +96,7 @@ export class YtDlpExtractor implements IAudioExtractor {
         }
       });
 
-      return new AudioFile(ytdlp.stdout as Readable, metadata.title, metadata.duration, 'opus');
+      return new AudioFile(ytdlp.stdout as Readable, metadata.title, metadata.duration, codec);
     } catch (error) {
       this.logger.error('Audio extraction failed', error);
       throw error;
@@ -95,6 +110,10 @@ export class YtDlpExtractor implements IAudioExtractor {
     } catch {
       return false;
     }
+  }
+
+  async getMetadata(url: string): Promise<{ title: string; duration: number }> {
+    return this.getVideoMetadata(url);
   }
 
   private async getVideoMetadata(url: string): Promise<{ title: string; duration: number }> {
@@ -232,6 +251,8 @@ export class YtDlpExtractor implements IAudioExtractor {
         return '5'; // ~128kbps
       case 'low':
         return '7'; // ~64kbps
+      case 'ultralow':
+        return '9'; // ~48kbps mono
       default:
         return '0';
     }
@@ -247,8 +268,27 @@ export class YtDlpExtractor implements IAudioExtractor {
         return 'bestaudio[abr<=128]/bestaudio/best';
       case 'low':
         return 'bestaudio[abr<=64]/bestaudio/best';
+      case 'ultralow':
+        return 'bestaudio[abr<=48]/bestaudio/best';
       default:
         return 'bestaudio/best';
+    }
+  }
+
+  private getBitrate(quality: AudioQuality): string {
+    switch (quality) {
+      case 'best':
+        return '256k';
+      case 'high':
+        return '192k';
+      case 'medium':
+        return '128k';
+      case 'low':
+        return '64k';
+      case 'ultralow':
+        return '48k';
+      default:
+        return '192k';
     }
   }
 
