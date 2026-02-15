@@ -187,7 +187,10 @@ For questions: create an issue on GitHub
       }
 
       await this.bot.sendChatAction(chatId, 'upload_voice');
-      await this.bot.sendAudio(chatId, audioFile.stream, audioFile.getFileName());
+      await this.bot.sendAudio(chatId, audioFile.stream, audioFile.getFileName(), {
+        title: audioFile.title,
+        duration: audioFile.duration,
+      });
 
       this.logger.info('Audio sent successfully', {
         userId,

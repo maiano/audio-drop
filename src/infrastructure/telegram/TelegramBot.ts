@@ -60,8 +60,16 @@ export class TelegramBot {
     this.processingUsers.delete(userId);
   }
 
-  async sendAudio(chatId: number, stream: Readable, filename: string): Promise<void> {
-    await this.bot.api.sendDocument(chatId, new InputFile(stream, filename), {
+  async sendAudio(
+    chatId: number,
+    stream: Readable,
+    filename: string,
+    options?: { title?: string; duration?: number },
+  ): Promise<void> {
+    await this.bot.api.sendAudio(chatId, new InputFile(stream, filename), {
+      title: options?.title || filename.replace(/\.[^.]+$/, ''),
+      performer: 'YouTube',
+      duration: options?.duration,
       caption: '🎵 Audio extracted',
     });
   }
